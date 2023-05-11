@@ -28,10 +28,11 @@ function App() {
         sliceX: 6,
         anims: {
           idle: 0,
-          walk: {
+          move: {
             from: 0,
             to: 5,
             speed: 8,
+            loop: true,
           },
         },
       },
@@ -50,9 +51,9 @@ function App() {
         // List of components, each offers a set of functionalities
         k.fixed(),
         k.sprite("astronaut"),
-        k.state("idle", ["idle", "walk"]),
-        k.move(0, 0),
-        k.pos(200, 0),
+        k.state("idle", ["idle", "move"]),
+        // k.move(0, 0),
+        k.pos(0, 0),
         k.area(),
         k.body(),
         k.health(8),
@@ -71,19 +72,24 @@ function App() {
 
   useEffect(() => {
     if (player) {
-      player.onStateEnter("walk", () => {
-        console.log("AAAAAAAA");
-        // enter "idle" state when the attack animation ends
-        player.play("walk", {
-          // any additional arguments will be passed into the onStateEnter() callback
-          onEnd: () => {
-            player.move();
-            console.log("AAAAa");
-          },
-        });
+      player.onStateEnter("move", async () => {
+        player.play("move");
+      });
+      player.onStateEnter("idle", async () => {
+        player.play("idle");
+      });
+      player.onStateUpdate("move", async () => {
+        if (!player.exists()) return;
+        if (player.pos.x >= 500) {
+          return player.enterState("idle");
+        }
+        const target = utils.add([utils.pos(500, player.pos.y)]);
+        const dir = target.pos.sub(player.pos).unit();
+        console.log(player.pos);
+        player.move(dir.scale(200));
       });
     }
-  }, []);
+  }, [player, utils]);
 
   return (
     <>
@@ -91,7 +97,7 @@ function App() {
       <canvas className="h-[700px]" ref={canvasRef} />
       <button
         onClick={() => {
-          player.follow(utils.vec2(100, 80));
+          player.enterState("move");
         }}
       >
         walk
