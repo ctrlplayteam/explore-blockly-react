@@ -1,8 +1,7 @@
 export const moveset = {
   "move();": `
-
-  player.enterState("move");
-  await delay();
+    player.enterState("move");
+    await delay();
   `,
   "jump();": `
   if(mode === "running"){
