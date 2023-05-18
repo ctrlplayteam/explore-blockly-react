@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import astronaut from "../../../assets/sprites/sprit-astronauta.png";
 import spaceshipSprite from "../../../assets/sprites/spaceship-sprite.png";
 import {
@@ -24,68 +24,103 @@ export const ToSpaceship = () => {
   const stepsCountRef = useRef<number>(1);
   const [code, setCode] = useState<string>("");
   const [showModal, setShowModal] = useState(false);
-  const { BlocklyComponent, generate } = useBlockly({
-    initialBlock: {
-      kind: "move",
-      x: 10,
-      y: 10,
-    },
-    toolbox: {
-      kind: "categoryToolbox",
-      contents: [
-        {
-          kind: "category",
-          name: "Control",
-          contents: [
-            {
-              kind: "block",
-              type: "move",
-            },
-            {
-              kind: "block",
-              type: "controls_if",
-            },
-            {
-              kind: "block",
-              type: "controls_repeat_ext",
-            },
-          ],
-        },
-        {
-          kind: "category",
-          name: "Matemática",
-          contents: [
-            {
-              kind: "block",
-              type: "math_number",
-            },
-          ],
-        },
-        {
-          kind: "category",
-          name: "Logic",
-          contents: [
-            {
-              kind: "block",
-              type: "logic_compare",
-            },
-            {
-              kind: "block",
-              type: "logic_operation",
-            },
-            {
-              kind: "block",
-              type: "logic_boolean",
-            },
-          ],
-        },
-      ],
-    },
-  });
-
-  const resetGame = () => {
-    stepsCountRef.current = 1;
+  const [shouldRestart, setShouldRestart] = useState(false);
+  const [level, setLevel] = useState(0);
+  const initialBlock = {
+    kind: "move",
+    x: 10,
+    y: 10,
   };
+  const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(true);
+  const { BlocklyComponent, generate, saveWorkspace, loadWorkspace } =
+    useBlockly({
+      initialBlock,
+      toolbox: {
+        kind: "categoryToolbox",
+        contents: [
+          {
+            kind: "category",
+            name: "Control",
+            cssconfig: {
+              container: "yourClassName control",
+              row: "newRowClass",
+              icon: "newIconClass",
+              label: "newLabelClass",
+            },
+            contents: [
+              {
+                kind: "block",
+                type: "move",
+              },
+              {
+                kind: "block",
+                type: "jump",
+              },
+              {
+                kind: "block",
+                type: "controls_if",
+              },
+              {
+                kind: "block",
+                type: "controls_repeat_ext",
+              },
+            ],
+          },
+          {
+            kind: "category",
+            name: "Matemática",
+
+            cssconfig: {
+              container: "yourClassName math",
+              row: "newRowClass",
+              icon: "newIconClass",
+              label: "newLabelClass",
+            },
+            contents: [
+              {
+                kind: "block",
+                type: "math_number",
+              },
+            ],
+          },
+
+          {
+            kind: "category",
+            cssconfig: {
+              container: "yourClassName logic",
+              row: "newRowClass",
+              icon: "newIconClass",
+              label: "newLabelClass",
+            },
+
+            name: "Logic",
+            colour: "#FD8F8F",
+            contents: [
+              {
+                kind: "block",
+                type: "controls_if",
+              },
+              {
+                kind: "block",
+                type: "logic_compare",
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+  useEffect(() => {
+    setIsLoadingWorkspace(true);
+    loadWorkspace(level).then(() => setIsLoadingWorkspace(false));
+  }, [level, loadWorkspace]);
+
+  const resetGame = useCallback(() => {
+    stepsCountRef.current = 1;
+    go("game", {
+      level,
+    });
+  }, [level]);
 
   const evaluateAsyncCode = (code: string) => {
     return new Promise(() => {
@@ -107,38 +142,47 @@ export const ToSpaceship = () => {
         canvas: canvasRef.current,
         background: [100, 100, 100],
       });
+
       loadSprite("spaceship", spaceshipSprite);
       loadSpriteAtlas(astronaut, {
         astronaut: {
-          height: 299,
-          width: 1365,
+          height: 794,
+          width: 963,
           x: 0,
-          y: 0,
-          sliceX: 6,
+          y: 140,
+          sliceX: 9,
+          sliceY: 6,
           anims: {
             move: {
               from: 0,
-              to: 5,
+              to: 7,
               loop: true,
             },
-            idle: 0,
+            idle: 8,
             jump: 4,
           },
         },
       });
       const level1 = [
+        "                     ",
+        "                     ",
         "A                    ",
         "                    ^",
         "=====================",
       ];
       const level2 = [
+        "                     ",
+        "                     ",
         "A                    ",
         "                    ^",
-        "====           ======",
+        "=======  =============",
       ];
       const levels = [level1, level2];
-      scene("game", ({ level } = { level: 1 }) => {
+      scene("game", ({ level } = { level: 0 }) => {
         gravity(2400);
+        setLevel(level);
+        setShouldRestart(false);
+
         const map = levels[level];
         addLevel(map, {
           height: 64,
@@ -167,6 +211,10 @@ export const ToSpaceship = () => {
       scene("success", () => {
         add([text("You win"), pos(12)]);
       });
+      scene("lose", () => {
+        setShouldRestart(true);
+        add([text("Deu ruim"), pos(12)]);
+      });
       go("game");
     }
   }, []);
@@ -187,7 +235,8 @@ export const ToSpaceship = () => {
         if (player.isGrounded()) {
           return player.enterState("idle");
         }
-        player.move(125, 0);
+        player.move(width() * 0.3, 0);
+        stepsCountRef.current += 1;
       });
       player.onStateUpdate("move", async () => {
         if (!player.exists()) return;
@@ -202,13 +251,18 @@ export const ToSpaceship = () => {
           .unit();
         player.move(dir.scale(200));
       });
+      player.onUpdate(() => {
+        if (player.pos.y >= 480) {
+          go("lose");
+        }
+      });
       player.onCollide("spaceship", () => {
         setShowModal(true);
         go("success");
         resetGame();
       });
     }
-  }, [player]);
+  }, [player, resetGame]);
 
   const generateCode = () => {
     const code = generate();
@@ -220,10 +274,22 @@ export const ToSpaceship = () => {
   return (
     <>
       <Wrapper
-        left={<canvas ref={canvasRef} className="w-[25vw] h-[15vw]" />}
-        right={<BlocklyComponent />}
+        left={<canvas ref={canvasRef} className="w-[512px] h-[256px]" />}
+        right={
+          <div className="w-full">
+            <p className={isLoadingWorkspace ? "block" : "hidden"}>LOADING</p>
+
+            <BlocklyComponent />
+          </div>
+        }
       />
-      <button onClick={generateCode}>Run</button>
+      <button
+        onClick={shouldRestart ? resetGame : generateCode}
+        className="w-10 h-10 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 dark:bg-blue-400 dark:hover:bg-blue-300 dark:active:bg-blue-200 flex items-center justify-center rounded-full p-2 text-3xl text-white transition duration-200 hover:cursor-pointer dark:text-white"
+      >
+        {!shouldRestart ? "‣" : "⟳"}
+      </button>
+
       {showModal ? (
         <>
           <div className="justify-center items-center flex overflow-x-hidden overflow-y-auto fixed inset-0 z-[999] outline-none focus:outline-none">
@@ -244,9 +310,7 @@ export const ToSpaceship = () => {
                 </div>
                 {/*body*/}
                 <div className="relative p-6 flex-auto">
-                  <p className="my-4 text-slate-500 text-lg leading-relaxed">
-                    <pre>{code}</pre>
-                  </p>
+                  <pre>{code}</pre>
                 </div>
                 {/*footer*/}
                 <div className="flex items-center justify-end p-6 border-t border-solid border-slate-200 rounded-b">
@@ -260,8 +324,9 @@ export const ToSpaceship = () => {
                   <button
                     className="bg-emerald-500 text-white active:bg-emerald-600 font-bold uppercase text-sm px-6 py-3 rounded shadow hover:shadow-lg outline-none focus:outline-none mr-1 mb-1 ease-linear transition-all duration-150"
                     type="button"
-                    onClick={() => {
-                      go("game", { level: 1 });
+                    onClick={async () => {
+                      await saveWorkspace(level);
+                      go("game", { level: (level + 1) % 2 });
                       setShowModal(false);
                     }}
                   >

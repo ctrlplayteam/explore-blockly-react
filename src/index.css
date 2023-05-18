@@ -1,3 +1,47 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.math {
+  background-color: #008f8f;
+}
+
+.logic {
+  background-color: #fd8f8f;
+}
+
+.control {
+  background-color: #700fff;
+}
+
+.yourClassName {
+  width: fit-content;
+  display: flex;
+  justify-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  /* border-radius: 100%; */
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  width: 100%;
+}
+
+.newRowClass {
+  width: 100%;
+  padding: 4px 10px;
+  /* border: 1px solid white; */
+}
+
+/* .newIconClass {
+    background-color: #000;
+    width: 10px;
+    height: 10px;
+  } */
+
+.newLabelClass {
+  color: white;
+  font-family: "Arial";
+  text-transform: uppercase;
+  line-height: 0;
+  /* padding-top: 2px; */
+}

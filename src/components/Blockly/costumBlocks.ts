@@ -15,6 +15,23 @@ Blockly.Blocks["move"] = {
   },
 };
 
+Blockly.Blocks["jump"] = {
+  init: function () {
+    this.appendDummyInput().appendField(
+      new Blockly.FieldLabelSerializable("pular"),
+      "NAME"
+    );
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour(290);
+    this.setTooltip("pular");
+    this.setHelpUrl("");
+  },
+};
+
 javascriptGenerator["move"] = function () {
   return "move();\n";
+};
+javascriptGenerator["jump"] = function () {
+  return "jump();\n";
 };
