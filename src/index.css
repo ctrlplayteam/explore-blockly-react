@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+.blocklyFlyoutScrollbar[display="none"] {
+  display: none;
+}
+
 .math {
   background-color: #008f8f;
 }

@@ -10,6 +10,7 @@ Blockly.Blocks["move"] = {
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(290);
+    this.setStyle("move_blocks");
     this.setTooltip("ir para frente");
     this.setHelpUrl("");
   },
@@ -21,9 +22,9 @@ Blockly.Blocks["jump"] = {
       new Blockly.FieldLabelSerializable("pular"),
       "NAME"
     );
+    this.setStyle("move_blocks");
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
-    this.setColour(290);
     this.setTooltip("pular");
     this.setHelpUrl("");
   },

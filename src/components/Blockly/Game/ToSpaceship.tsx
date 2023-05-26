@@ -12,8 +12,9 @@ import {
 import kaboom from "../../../kaboom";
 import { delay } from "../../../utils/delay";
 import { Wrapper } from "../../game/Wrapper";
-import useBlockly from "../hooks/useBlckly";
 import { replaceMoves } from "../../../utils/replaceMoves";
+import { BlocklyWorkspace } from "react-blockly";
+import { javascriptGenerator } from "blockly/javascript";
 
 type body = PosComp | BodyComp | AreaComp;
 type player = GameObj<body | SpriteComp | StateComp>;
@@ -26,94 +27,7 @@ export const ToSpaceship = () => {
   const [showModal, setShowModal] = useState(false);
   const [shouldRestart, setShouldRestart] = useState(false);
   const [level, setLevel] = useState(0);
-  const initialBlock = {
-    kind: "move",
-    x: 10,
-    y: 10,
-  };
-  const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(true);
-  const { BlocklyComponent, generate, saveWorkspace, loadWorkspace } =
-    useBlockly({
-      initialBlock,
-      toolbox: {
-        kind: "categoryToolbox",
-        contents: [
-          {
-            kind: "category",
-            name: "Control",
-            cssconfig: {
-              container: "yourClassName control",
-              row: "newRowClass",
-              icon: "newIconClass",
-              label: "newLabelClass",
-            },
-            contents: [
-              {
-                kind: "block",
-                type: "move",
-              },
-              {
-                kind: "block",
-                type: "jump",
-              },
-              {
-                kind: "block",
-                type: "controls_if",
-              },
-              {
-                kind: "block",
-                type: "controls_repeat_ext",
-              },
-            ],
-          },
-          {
-            kind: "category",
-            name: "Matemática",
-
-            cssconfig: {
-              container: "yourClassName math",
-              row: "newRowClass",
-              icon: "newIconClass",
-              label: "newLabelClass",
-            },
-            contents: [
-              {
-                kind: "block",
-                type: "math_number",
-              },
-            ],
-          },
-
-          {
-            kind: "category",
-            cssconfig: {
-              container: "yourClassName logic",
-              row: "newRowClass",
-              icon: "newIconClass",
-              label: "newLabelClass",
-            },
-
-            name: "Logic",
-            colour: "#FD8F8F",
-            contents: [
-              {
-                kind: "block",
-                type: "controls_if",
-              },
-              {
-                kind: "block",
-                type: "logic_compare",
-              },
-            ],
-          },
-        ],
-      },
-    });
-
-  useEffect(() => {
-    setIsLoadingWorkspace(true);
-    loadWorkspace(level).then(() => setIsLoadingWorkspace(false));
-  }, [level, loadWorkspace]);
+  const [isLoadingWorkspace] = useState(true);
 
   const resetGame = useCallback(() => {
     stepsCountRef.current = 1;
@@ -265,10 +179,8 @@ export const ToSpaceship = () => {
   }, [player, resetGame]);
 
   const generateCode = () => {
-    const code = generate();
     const runnableCode = replaceMoves(code);
     evaluateAsyncCode(runnableCode);
-    setCode(code);
   };
 
   return (
@@ -278,8 +190,143 @@ export const ToSpaceship = () => {
         right={
           <div className="w-full">
             <p className={isLoadingWorkspace ? "block" : "hidden"}>LOADING</p>
+            <BlocklyWorkspace
+              className="w-full h-96"
+              workspaceConfiguration={{
+                renderer: "zelos",
 
-            <BlocklyComponent />
+                theme: {
+                  name: ``,
+                  blockStyles: {
+                    move_blocks: {
+                      hat: "#000",
+                      colourPrimary: "#FD0F8F",
+                      colourSecondary: "#ddd",
+                      colourTertiary: "#eee",
+                    },
+                    logic_blocks: {
+                      hat: "#000",
+                      colourPrimary: "#FFF",
+                      colourSecondary: "#ddd",
+                      colourTertiary: "#eee",
+                    },
+                    math_blocks: {
+                      hat: "",
+                      colourPrimary: "#26C5F3",
+                      colourSecondary: "#ddd",
+                      colourTertiary: "#eee",
+                    },
+                  },
+                  categoryStyles: {
+                    logic_category: {
+                      colour: "#FD8F8F",
+                    },
+                  },
+                  fontStyle: {
+                    family: "Courier New, serif",
+                    weight: "bold",
+                    size: 12,
+                  },
+                  componentStyles: {
+                    workspaceBackgroundColour: "#fafafa",
+                    toolboxBackgroundColour: "#eee",
+                  },
+                },
+              }}
+              initialJson={{
+                blocks: {
+                  languageVersion: 0,
+                  blocks: [
+                    {
+                      type: "move",
+                      id: "Rd`SA@JPC=lcK-mf{aPN",
+                      x: 26,
+                      y: 55,
+                      fields: {
+                        NAME: "caminhar",
+                      },
+                    },
+                  ],
+                },
+              }}
+              toolboxConfiguration={{
+                kind: "categoryToolbox",
+                contents: [
+                  {
+                    kind: "category",
+                    name: "Control",
+                    categorystyle: "control_blocks",
+                    cssconfig: {
+                      container: "yourClassName control",
+                      row: "newRowClass",
+                      icon: "newIconClass",
+                      label: "newLabelClass",
+                    },
+                    contents: [
+                      {
+                        kind: "block",
+                        type: "move",
+                      },
+                      {
+                        kind: "block",
+                        type: "jump",
+                      },
+                      {
+                        kind: "block",
+                        type: "controls_if",
+                      },
+                      {
+                        kind: "block",
+                        type: "controls_repeat_ext",
+                      },
+                    ],
+                  },
+                  {
+                    kind: "category",
+                    name: "Matemática",
+                    cssconfig: {
+                      container: "yourClassName math",
+                      row: "newRowClass",
+                      icon: "newIconClass",
+                      label: "newLabelClass",
+                    },
+                    contents: [
+                      {
+                        kind: "block",
+                        type: "math_number",
+                      },
+                    ],
+                  },
+                  {
+                    kind: "category",
+                    cssconfig: {
+                      container: "yourClassName logic",
+                      row: "newRowClass",
+                      icon: "newIconClass",
+                      label: "newLabelClass",
+                    },
+
+                    name: "Logic",
+                    colour: "#FD8F8F",
+                    contents: [
+                      {
+                        kind: "block",
+                        type: "controls_if",
+                      },
+                      {
+                        kind: "block",
+                        type: "logic_compare",
+                      },
+                    ],
+                  },
+                ],
+              }}
+              onWorkspaceChange={(workspace) => {
+                const code = javascriptGenerator.workspaceToCode(workspace);
+                setCode(code);
+              }}
+              onXmlChange={(e) => console.log(e)}
+            />
           </div>
         }
       />
@@ -289,8 +336,8 @@ export const ToSpaceship = () => {
       >
         {!shouldRestart ? "‣" : "⟳"}
       </button>
-
-      {showModal ? (
+      <pre>{code ?? ""}</pre>
+      {showModal && (
         <>
           <div className="justify-center items-center flex overflow-x-hidden overflow-y-auto fixed inset-0 z-[999] outline-none focus:outline-none">
             <div className="relative w-auto my-6 mx-auto max-w-3xl">
@@ -325,7 +372,7 @@ export const ToSpaceship = () => {
                     className="bg-emerald-500 text-white active:bg-emerald-600 font-bold uppercase text-sm px-6 py-3 rounded shadow hover:shadow-lg outline-none focus:outline-none mr-1 mb-1 ease-linear transition-all duration-150"
                     type="button"
                     onClick={async () => {
-                      await saveWorkspace(level);
+                      // await saveWorkspace(level);
                       go("game", { level: (level + 1) % 2 });
                       setShowModal(false);
                     }}
@@ -338,7 +385,7 @@ export const ToSpaceship = () => {
           </div>
           <div className="opacity-25 fixed inset-0 z-40 bg-black"></div>
         </>
-      ) : null}
+      )}
     </>
   );
 };
