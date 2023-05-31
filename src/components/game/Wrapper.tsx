@@ -6,7 +6,7 @@ interface Props {
 }
 export const Wrapper: React.FC<Props> = ({ left, right }) => {
   return (
-    <div className="flex gap-4 w-full items-start">
+    <div className="flex gap-4 w-full">
       {left}
       {right}
     </div>

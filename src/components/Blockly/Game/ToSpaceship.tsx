@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import astronaut from "../../../assets/sprites/sprit-astronauta.png";
+import astronaut from "../../../assets/sprites/blockly-game-character.png";
 import spaceshipSprite from "../../../assets/sprites/spaceship-sprite.png";
 import {
   GameObj,
@@ -8,26 +8,87 @@ import {
   AreaComp,
   SpriteComp,
   StateComp,
+  OriginComp,
+  ScaleComp,
+  SolidComp,
 } from "../../../../node_modules/kaboom/";
 import kaboom from "../../../kaboom";
 import { delay } from "../../../utils/delay";
-import { Wrapper } from "../../game/Wrapper";
 import { replaceMoves } from "../../../utils/replaceMoves";
 import { BlocklyWorkspace } from "react-blockly";
+import { Wrapper } from "../../game/Wrapper";
 import { javascriptGenerator } from "blockly/javascript";
 
-type body = PosComp | BodyComp | AreaComp;
-type player = GameObj<body | SpriteComp | StateComp>;
+type body = PosComp | AreaComp;
+
+type player = GameObj<
+  | body
+  | SpriteComp
+  | StateComp
+  | {
+      id: string;
+      require: string[];
+      update(): void;
+      isSmall(): boolean;
+      smallify(time?: number): void;
+      biggify(): void;
+    }
+  | SolidComp
+  | ScaleComp
+  | OriginComp
+>;
 
 export const ToSpaceship = () => {
   const [player, setPlayer] = useState<player>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stepsCountRef = useRef<number>(1);
+  const positionYRef = useRef<number>(1);
   const [code, setCode] = useState<string>("");
   const [showModal, setShowModal] = useState(false);
+  const [angle, setAngle] = useState<number>(0);
   const [shouldRestart, setShouldRestart] = useState(false);
   const [level, setLevel] = useState(0);
-  const [isLoadingWorkspace] = useState(true);
+  // const [isLoadingWorkspace] = useState(true);
+
+  // custom component that makes stuff grow big
+  function big() {
+    let timer = 0;
+    let isSmall = false;
+    let destScale = 1;
+    return {
+      // component id / name
+      id: "big",
+      // it requires the scale component
+      require: ["scale"],
+      // this runs every frame
+      update() {
+        if (isSmall) {
+          timer -= dt();
+          if (timer <= 0) {
+            this.biggify();
+          }
+        }
+        (this as any).scale = (this as any).scale.lerp(
+          vec2(destScale),
+          dt() * 6
+        );
+      },
+      // custom methods
+      isSmall() {
+        return isSmall;
+      },
+      smallify(time = 5) {
+        destScale = 0.1;
+        timer = time;
+        isSmall = false;
+      },
+      biggify() {
+        destScale = 1;
+        timer = 0;
+        isSmall = true;
+      },
+    };
+  }
 
   const resetGame = useCallback(() => {
     stepsCountRef.current = 1;
@@ -54,70 +115,70 @@ export const ToSpaceship = () => {
     if (canvasRef.current) {
       const k = kaboom({
         canvas: canvasRef.current,
-        background: [100, 100, 100],
+        scale: 2,
       });
 
       loadSprite("spaceship", spaceshipSprite);
       loadSpriteAtlas(astronaut, {
         astronaut: {
-          height: 794,
-          width: 963,
+          height: 48,
+          width: 48 * 21,
           x: 0,
-          y: 140,
-          sliceX: 9,
-          sliceY: 6,
+          y: 0,
+          sliceX: 21,
           anims: {
-            move: {
-              from: 0,
-              to: 7,
-              loop: true,
-            },
-            idle: 8,
+            idle: 0,
             jump: 4,
           },
         },
       });
-      const level1 = [
-        "                     ",
-        "                     ",
-        "A                    ",
-        "                    ^",
-        "=====================",
-      ];
-      const level2 = [
-        "                     ",
-        "                     ",
-        "A                    ",
-        "                    ^",
-        "=======  =============",
-      ];
-      const levels = [level1, level2];
       scene("game", ({ level } = { level: 0 }) => {
-        gravity(2400);
         setLevel(level);
         setShouldRestart(false);
-
-        const map = levels[level];
+        addLevel(["===================m", "ffffffffffffffffffff"], {
+          width: 24,
+          height: 24,
+          "=": () => [rect(24, 24), outline(1), "floor"],
+          m: () => [
+            rect(24, 24),
+            outline(1),
+            "floor",
+            k.color(255, 0, 0),
+            k.origin("topleft"),
+          ],
+          f: () => [rect(24, 24), "out", solid(), area(), "enemy"],
+        });
+        const map = ["A            "];
         addLevel(map, {
-          height: 64,
-          width: 64,
-          pos: vec2(0, height() - 64 * map.length),
-          "=": () => [rect(64, 64), outline(4), area(), solid()],
+          height: 48,
+          width: 48,
+          pos: vec2(0, 0),
           A: () => [
-            k.origin("botleft"),
-            body(),
+            solid(),
             area(),
+            big(),
+            scale(),
+            pos(48 * 0 + 8, 0),
+            k.origin("center"),
             sprite("astronaut"),
-            state("idle", ["idle", "move", "jump"]),
+            state("idle", [
+              "idle",
+              "forward",
+              "backwards",
+              "down",
+              "up",
+              "die",
+            ]),
             "player",
           ],
-          "^": () => [
-            sprite("spaceship"),
-            k.origin("botright"),
-            body(),
-            area(),
-            "spaceship",
-          ],
+
+          // "^": () => [
+          //   sprite("spaceship"),
+          //   k.origin("botright"),
+          //   body(),
+          //   area(),
+          //   "spaceship",
+          // ],
         });
         const player = get("player")[0];
         setPlayer(player as player);
@@ -135,45 +196,85 @@ export const ToSpaceship = () => {
 
   useEffect(() => {
     if (player) {
-      player.onStateEnter("move", async () => {
-        player.play("move");
-      });
-      player.onStateEnter("idle", async () => {
+      player.onStateUpdate("idle", async () => {
         player.play("idle");
       });
-      player.onStateEnter("jump", () => {
-        player.play("jump");
-        player.jump();
-      });
       player.onStateUpdate("jump", () => {
-        if (player.isGrounded()) {
-          return player.enterState("idle");
-        }
         player.move(width() * 0.3, 0);
-        stepsCountRef.current += 1;
       });
-      player.onStateUpdate("move", async () => {
+      player.onStateEnter("right", () => {
         if (!player.exists()) return;
-        const target = stepsCountRef.current * width() * 0.25;
-        if (player.pos.x >= target) {
-          stepsCountRef.current += 1;
+      });
+      player.onStateUpdate("backwards", () => {
+        if (!player.exists()) return;
+        player.flipX(true);
+        const target = (stepsCountRef.current - 2) * 48 + 8;
+        if (player.pos.x <= target) {
+          stepsCountRef.current -= 1;
+          player.moveTo(target, player.pos.y);
           return player.enterState("idle");
         }
-
         const dir = add([pos(target, player.pos.y)])
           .pos.sub(player.pos)
           .unit();
         player.move(dir.scale(200));
       });
-      player.onUpdate(() => {
-        if (player.pos.y >= 480) {
-          go("lose");
+      player.onStateUpdate("forward", () => {
+        if (!player.exists()) return;
+        player.flipX(false);
+        const target = stepsCountRef.current * 48 + 8;
+        if (player.pos.x >= target) {
+          stepsCountRef.current += 1;
+          player.moveTo(target, player.pos.y);
+          return player.enterState("idle");
+        }
+        const dir = add([pos(target, player.pos.y)])
+          .pos.sub(player.pos)
+          .unit();
+        player.move(dir.scale(200));
+      });
+      player.onStateUpdate("up", () => {
+        if (!player.exists()) return;
+        player.flipX(false);
+        const target = (positionYRef.current - 2) * 48;
+        if (player.pos.y <= target) {
+          positionYRef.current -= 1;
+          player.moveTo(player.pos.x, target);
+          return player.enterState("idle");
+        }
+        const dir = add([pos(player.pos.x, target)])
+          .pos.sub(player.pos)
+          .unit();
+        player.move(dir.scale(200));
+      });
+      player.onStateUpdate("down", () => {
+        if (!player.exists()) return;
+        player.flipX(false);
+        const target = positionYRef.current * 48;
+        if (player.pos.y >= target) {
+          positionYRef.current += 1;
+          player.moveTo(player.pos.x, target);
+          return player.enterState("idle");
+        }
+        const dir = add([pos(player.pos.x, target)])
+          .pos.sub(player.pos)
+          .unit();
+        player.move(dir.scale(200));
+      });
+      player.onStateUpdate("die", () => {
+        player.smallify(40);
+        if (typeof player.scale !== "number") {
+          if (player.scale.x <= 0.15) {
+            go("lose");
+          }
         }
       });
-      player.onCollide("spaceship", () => {
-        setShowModal(true);
-        go("success");
-        resetGame();
+      player.onCollide("enemy", (_obj, col) => {
+        const target = player.pos.y + 24 + 8;
+        if (col?.isBottom()) {
+          player?.moveTo(player.pos.x, target);
+          player.enterState("die");
+        }
       });
     }
   }, [player, resetGame]);
@@ -183,13 +284,26 @@ export const ToSpaceship = () => {
     evaluateAsyncCode(runnableCode);
   };
 
+  const handleMoviment = () => {
+    if (angle === 0) {
+      player?.enterState("forward");
+    } else if (angle === 90) {
+      player?.enterState("up");
+    } else if (angle === 180) {
+      player?.enterState("backwards");
+    } else if (angle === 270) {
+      player?.enterState("down");
+    } else {
+      alert("aaaaaaaaaaaa");
+    }
+  };
+
   return (
     <>
       <Wrapper
-        left={<canvas ref={canvasRef} className="w-[512px] h-[256px]" />}
+        left={<canvas ref={canvasRef} className="w-[720px]" />}
         right={
           <div className="w-full">
-            <p className={isLoadingWorkspace ? "block" : "hidden"}>LOADING</p>
             <BlocklyWorkspace
               className="w-full h-96"
               workspaceConfiguration={{
@@ -325,17 +439,31 @@ export const ToSpaceship = () => {
                 const code = javascriptGenerator.workspaceToCode(workspace);
                 setCode(code);
               }}
-              onXmlChange={(e) => console.log(e)}
             />
           </div>
         }
       />
       <button
+        className="my-5 bg-blue-700 p-5"
+        onClick={() => {
+          setAngle((prev) => ((prev / 90 + 1) % 4) * 90);
+        }}
+      >
+        {angle}
+      </button>
+      <div className="flex gap-5">
+        <button onClick={() => player?.enterState("forward")}>Frente</button>
+        <button onClick={() => player?.enterState("backwards")}>Traz</button>
+        <button onClick={() => player?.enterState("down")}>Baixo</button>
+        <button onClick={() => player?.enterState("up")}>Cima</button>
+        <button onClick={handleMoviment}>Mover-se</button>
+      </div>
+      {/* <button
         onClick={shouldRestart ? resetGame : generateCode}
         className="w-10 h-10 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 dark:bg-blue-400 dark:hover:bg-blue-300 dark:active:bg-blue-200 flex items-center justify-center rounded-full p-2 text-3xl text-white transition duration-200 hover:cursor-pointer dark:text-white"
       >
         {!shouldRestart ? "‣" : "⟳"}
-      </button>
+      </button> */}
       <pre>{code ?? ""}</pre>
       {showModal && (
         <>
